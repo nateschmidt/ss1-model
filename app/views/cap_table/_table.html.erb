@@ -1,0 +1,226 @@
+<%= turbo_frame_tag "cap-table" do %>
+<section>
+  <div class="flex items-center justify-between mb-5">
+    <div class="flex items-center gap-3">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Capitalization Table</h2>
+      <span class="text-xs text-steel ml-2">Average Company Basis</span>
+    </div>
+    <% grand_total = @result[:rows].sum { |r| r[:total] } + @calculator.effective_option_pool %>
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-signal-green"></span>
+        <span class="data-cell text-ash">
+          Fully Allocated: <%= format_pct(grand_total) %>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-charcoal border border-slate-mid/60 rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <%# Column headers %>
+        <thead>
+          <tr class="border-b border-slate-mid/60">
+            <th class="text-left px-4 py-3 section-label">Entity</th>
+            <th class="text-left px-3 py-3 section-label">Type</th>
+            <th class="text-right px-3 py-3 section-label">Investment</th>
+            <th class="text-right px-3 py-3 section-label">Advisory</th>
+            <th class="text-center px-3 py-3 section-label">Finder's Fees</th>
+            <th class="text-right px-3 py-3 section-label">Finder's %</th>
+            <th class="text-right px-3 py-3 section-label">Pooled</th>
+            <th class="text-right px-3 py-3 section-label">Common Total</th>
+            <th class="text-right px-3 py-3 section-label">Preferred</th>
+            <th class="text-right px-3 py-3 section-label">Alloy Equity</th>
+            <th class="text-right px-3 py-3 section-label bg-slate-deep/30">Nominal %</th>
+            <th class="text-right px-4 py-3 section-label bg-slate-deep/50">Effective %</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @result[:rows].each_with_index do |row, i| %>
+            <% entity = row[:entity] %>
+            <% stripe = i.odd? ? "bg-slate-deep/20" : "" %>
+            <tr class="<%= stripe %> border-b border-slate-mid/20 hover:bg-slate-deep/40 transition-colors duration-100">
+              <%# Entity Name %>
+              <td class="px-4 py-2.5">
+                <span class="text-sm font-medium text-white"><%= entity.name %></span>
+              </td>
+
+              <%# Type Badge %>
+              <td class="px-3 py-2.5">
+                <% badge_color = case entity.entity_type
+                   when "consortium" then "text-signal-blue"
+                   when "investor" then "text-signal-green"
+                   when "operator" then "text-accent"
+                   else "text-ash"
+                   end %>
+                <span class="text-xs font-medium <%= badge_color %>"><%= entity.entity_type.titleize %></span>
+              </td>
+
+              <%# Investment %>
+              <td class="px-3 py-2.5 text-right">
+                <% if entity.operator? || entity.third_party? %>
+                  <span class="text-steel/40">—</span>
+                <% else %>
+                  <%= form_with(url: update_entity_path(entity), method: :patch, class: "inline") do |f| %>
+                    <div class="inline-flex items-center gap-0.5" data-controller="currency-input">
+                      <span class="text-steel text-xs">$</span>
+                      <%= f.hidden_field "entity[investment]", value: entity.investment.to_i,
+                            data: { currency_input_target: "hidden" } %>
+                      <%= text_field_tag "display_investment_#{entity.id}",
+                            number_with_delimiter(entity.investment.to_i),
+                            class: "table-input",
+                            data: { currency_input_target: "display",
+                                    action: "input->currency-input#format change->currency-input#submit" } %>
+                    </div>
+                  <% end %>
+                <% end %>
+              </td>
+
+              <%# Advisory %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if row[:advisory] > 0 %>
+                  <span class="text-ice"><%= format_pct(row[:advisory]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Finder's Fee Stepper %>
+              <td class="px-3 py-2.5 text-center">
+                <div class="inline-flex items-center gap-1.5">
+                  <%= button_to "−", decrement_finders_fee_path(entity),
+                        method: :post,
+                        class: "stepper-btn",
+                        disabled: entity.finders_fee_count.zero? %>
+                  <span class="data-cell w-5 text-center text-ice"><%= entity.finders_fee_count %></span>
+                  <%= button_to "+", increment_finders_fee_path(entity),
+                        method: :post,
+                        class: "stepper-btn" %>
+                </div>
+              </td>
+
+              <%# Finder's Fee % %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if row[:finders_fee] > 0 %>
+                  <span class="text-ice"><%= format_pct(row[:finders_fee]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Pooled %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if row[:pooled] > 0 %>
+                  <span class="text-ice"><%= format_pct(row[:pooled]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Common Total (Adv + Find + Pooled) %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if row[:adv_plus_pooled] > 0 %>
+                  <span class="text-silver font-medium"><%= format_pct(row[:adv_plus_pooled]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Preferred %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if row[:preferred] > 0 %>
+                  <span class="text-ice"><%= format_pct(row[:preferred]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Alloy Equity %>
+              <td class="px-3 py-2.5 text-right data-cell">
+                <% if entity.operator? %>
+                  <span class="text-accent font-medium"><%= format_pct(row[:alloy_equity]) %></span>
+                <% else %>
+                  <span class="text-steel/40">—</span>
+                <% end %>
+              </td>
+
+              <%# Nominal Total %>
+              <td class="px-3 py-2.5 text-right data-cell bg-slate-deep/20">
+                <span class="text-silver"><%= format_pct(row[:nominal_total]) %></span>
+              </td>
+
+              <%# Effective Total %>
+              <td class="px-4 py-2.5 text-right data-cell bg-slate-deep/30">
+                <span class="text-white font-semibold"><%= format_pct(row[:total]) %></span>
+              </td>
+            </tr>
+          <% end %>
+
+          <%# ── Option Pool Row ── %>
+          <tr class="border-b border-accent/20 bg-accent/5">
+            <td class="px-4 py-2.5">
+              <span class="text-sm font-medium text-accent-glow">Founders Option Pool</span>
+            </td>
+            <td class="px-3 py-2.5">
+              <span class="text-xs text-accent-dim">Reserved</span>
+            </td>
+            <td class="px-3 py-2.5" colspan="8">
+              <div class="flex items-center gap-4 justify-end">
+                <span class="text-xs text-accent-dim">
+                  Pool Size: <%= format_pct(@result[:option_pool]) %>
+                </span>
+                <span class="text-xs text-steel">|</span>
+                <span class="text-xs text-accent-dim">
+                  Exercised: <%= format_pct(@result[:option_pool_exercised]) %>
+                </span>
+              </div>
+            </td>
+            <td class="px-3 py-2.5 text-right data-cell bg-slate-deep/20">
+              <span class="text-accent"><%= format_pct(@calculator.nominal_option_pool) %></span>
+            </td>
+            <td class="px-4 py-2.5 text-right data-cell bg-slate-deep/30">
+              <span class="text-accent font-semibold"><%= format_pct(@calculator.effective_option_pool) %></span>
+            </td>
+          </tr>
+
+          <%# ── Grand Total Row ── %>
+          <% nominal_grand = @result[:rows].sum { |r| r[:nominal_total] } + @calculator.nominal_option_pool %>
+          <tr class="bg-slate-deep">
+            <td class="px-4 py-3" colspan="10">
+              <span class="text-sm font-semibold text-white tracking-wide">Total Allocation</span>
+            </td>
+            <td class="px-3 py-3 text-right bg-slate-mid/20">
+              <span class="data-cell text-silver font-bold text-sm"><%= format_pct(nominal_grand) %></span>
+            </td>
+            <td class="px-4 py-3 text-right bg-slate-mid/30">
+              <span class="data-cell text-white font-bold text-sm"><%= format_pct(grand_total) %></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%# Summary bar %>
+  <div class="mt-3 flex items-center gap-6 px-1">
+    <span class="data-cell text-steel text-xs">
+      Option Pool: <span class="text-ash"><%= format_pct(@result[:option_pool]) %></span> nominal
+    </span>
+    <span class="text-slate-mid">|</span>
+    <span class="data-cell text-steel text-xs">
+      Exercised: <span class="text-ash"><%= format_pct(@result[:option_pool_exercised]) %></span>
+    </span>
+    <span class="text-slate-mid">|</span>
+    <span class="data-cell text-steel text-xs">
+      Effective Pool: <span class="text-ash"><%= format_pct(@calculator.effective_option_pool) %></span>
+    </span>
+    <span class="text-slate-mid">|</span>
+    <span class="data-cell text-steel text-xs">
+      Alloy Residual: <span class="text-accent"><%= format_pct(@result[:alloy_equity]) %></span>
+    </span>
+  </div>
+</section>
+<% end %>

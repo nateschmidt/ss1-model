@@ -1,0 +1,64 @@
+<%# ═══ VARIABLES PANEL ═══ %>
+<section class="mb-10">
+  <div class="flex items-center gap-3 mb-5">
+    <div class="w-1 h-5 bg-accent rounded-full"></div>
+    <h2 class="section-label text-silver tracking-widest">Model Parameters</h2>
+  </div>
+
+  <div class="bg-charcoal border border-slate-mid/60 rounded-lg">
+    <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-mid/40">
+      <% Variable::KEYS.each_with_index do |key, idx| %>
+        <% variable = @variables[key] %>
+        <% next unless variable %>
+        <% border_top = idx >= 4 ? "border-t border-slate-mid/40" : "" %>
+        <%= form_with(url: update_variable_path(variable), method: :patch,
+              data: { controller: "auto-submit" }) do |f| %>
+          <div class="px-4 py-4 <%= border_top %>">
+            <label class="section-label block mb-2">
+              <span class="inline-flex items-center gap-1.5">
+                <%= variable.label %>
+                <% if variable.help_text %>
+                  <span class="relative" data-controller="tooltip">
+                    <button type="button" data-action="click->tooltip#toggle"
+                      class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent/20 text-accent hover:bg-accent/40 transition-colors cursor-pointer"
+                      aria-label="Help">
+                      <span class="text-xs font-bold leading-none" style="font-family: var(--font-body);">?</span>
+                    </button>
+                    <div data-tooltip-target="modal" class="hidden absolute z-50 left-0 top-full mt-2 w-56 bg-slate-deep border border-slate-mid rounded-lg shadow-xl shadow-black/40 p-3">
+                      <p class="text-xs text-silver leading-relaxed normal-case tracking-normal font-normal"><%= variable.help_text %></p>
+                    </div>
+                  </span>
+                <% end %>
+              </span>
+            </label>
+            <div class="flex items-center gap-1">
+              <% if variable.format_type == :currency %>
+                <span class="text-steel text-sm">$</span>
+                <div class="w-full" data-controller="currency-input">
+                  <%= f.hidden_field :value, value: variable.value.to_i,
+                        data: { currency_input_target: "hidden" } %>
+                  <%= text_field_tag "display_#{variable.key}",
+                        number_with_delimiter(variable.value.to_i),
+                        class: "var-input",
+                        data: { currency_input_target: "display",
+                                action: "input->currency-input#format change->currency-input#submit" } %>
+                </div>
+              <% else %>
+                <%= f.number_field :value, value: variable.value.to_i,
+                      step: variable_input_step(variable),
+                      class: "var-input",
+                      data: { action: "change->auto-submit#submit" } %>
+                <% if variable.format_type == :percentage %>
+                  <span class="text-steel text-sm">%</span>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<%# ═══ CAP TABLE ═══ %>
+<%= render partial: "cap_table/table" %>
