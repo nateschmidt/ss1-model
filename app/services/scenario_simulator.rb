@@ -43,7 +43,7 @@ class ScenarioSimulator
   # with a tail down to 0% for companies Alloy operates long-term.
   FOUNDER_POOL_SKEW = 2.5
 
-  SEED_RANGE       = (2_000_000..5_000_000)
+  SEED_RANGE       = (1_500_000..3_500_000)
   SEED_DILUTION    = (20..25)
   SERIES_A_RANGE   = (10_000_000..25_000_000)
   SERIES_A_DILUTION = (20..25)
@@ -119,16 +119,22 @@ class ScenarioSimulator
       return build_company(number, :failed, :incubation, months, capital, 0, nil, [])
     end
 
-    # Survived incubation
-    low = [10, max_months].min
-    months = low >= max_months ? max_months : rand(low..max_months)
-    capital = months * MONTHLY_BURN
-
-    # Determine how much of the option pool goes to founders
-    # Skewed toward 100% — rand**skew clusters near 0, so 1 - that clusters near 1
+    # Survived incubation — determine founder allocation first,
+    # because it drives how long Alloy operates the company.
     pool = @vars[:founders_option_pool]
     exercise_rate = 1.0 - (rand ** FOUNDER_POOL_SKEW)
     founders_pct = pool * exercise_rate
+
+    # If founders get less than half the pool, Alloy is running it
+    # themselves and will use the full incubation period.
+    if exercise_rate < 0.5
+      months = max_months
+    else
+      # Founders came in — Alloy hands off earlier
+      low = [6, max_months].min
+      months = low >= max_months ? max_months : rand(low..max_months)
+    end
+    capital = months * MONTHLY_BURN
 
     cap = build_initial_cap_table(capital, founders_pct)
     rounds = []
@@ -303,6 +309,7 @@ class ScenarioSimulator
     sorted = simulations.sort_by { |s| s[:tvpi] }
     median = sorted[sorted.size / 2]
 
+    n = sorted.size.to_f
     {
       risk_level: @risk_level,
       num_simulations: @num_simulations,
@@ -315,10 +322,35 @@ class ScenarioSimulator
         p90: pct_data(sorted, 90),
       },
       median_simulation: median,
-      avg_tvpi: (sorted.sum { |s| s[:tvpi] } / sorted.size.to_f).round(2),
-      avg_launched: (sorted.sum { |s| s[:companies_launched] } / sorted.size.to_f).round(1),
-      avg_exited: (sorted.sum { |s| s[:companies_exited] } / sorted.size.to_f).round(1),
-      avg_failed: (sorted.sum { |s| s[:companies_failed] } / sorted.size.to_f).round(1),
+      avg_tvpi: (sorted.sum { |s| s[:tvpi] } / n).round(2),
+      avg_launched: (sorted.sum { |s| s[:companies_launched] } / n).round(1),
+      avg_exited: (sorted.sum { |s| s[:companies_exited] } / n).round(1),
+      avg_failed: (sorted.sum { |s| s[:companies_failed] } / n).round(1),
+      avg_stakeholder_returns: stakeholder_averages(simulations),
+    }
+  end
+
+  def stakeholder_averages(simulations)
+    keys = [:ss1, :alloy, :founders, :consortium, :advisory, :seed, :series_a, :series_b]
+    n = simulations.size.to_f
+
+    totals = keys.each_with_object({}) { |k, h| h[k] = 0.0 }
+    simulations.each do |sim|
+      sim[:companies].each do |c|
+        next unless c[:waterfall]
+        keys.each { |k| totals[k] += (c[:waterfall][k] || 0) }
+      end
+    end
+
+    {
+      ss1:        (totals[:ss1] / n).round(0),
+      alloy:      (totals[:alloy] / n).round(0),
+      founders:   (totals[:founders] / n).round(0),
+      consortium: ((totals[:consortium] + totals[:advisory]) / n).round(0),
+      seed:       (totals[:seed] / n).round(0),
+      series_a:   (totals[:series_a] / n).round(0),
+      series_b:   (totals[:series_b] / n).round(0),
+      follow_on:  ((totals[:seed] + totals[:series_a] + totals[:series_b]) / n).round(0),
     }
   end
 

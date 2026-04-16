@@ -9,7 +9,8 @@
     </div>
 
     <%# Top-level metrics %>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <% sr = @result[:avg_stakeholder_returns] %>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
       <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
         <span class="section-label block mb-1">Fund Size</span>
         <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
@@ -17,24 +18,69 @@
         </span>
       </div>
       <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
-        <span class="section-label block mb-1">Avg. TVPI</span>
+        <span class="section-label block mb-1">Launched / Exited / Failed</span>
+        <span class="text-xl font-semibold" style="font-family: var(--font-data);">
+          <span class="text-white"><%= @result[:avg_launched] %></span>
+          <span class="text-steel">/</span>
+          <span class="text-signal-green"><%= @result[:avg_exited] %></span>
+          <span class="text-steel">/</span>
+          <span class="text-signal-red"><%= @result[:avg_failed] %></span>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Avg. Fund TVPI</span>
         <span class="text-xl text-accent font-semibold" style="font-family: var(--font-data);">
           <%= format_multiple(@result[:avg_tvpi]) %>
         </span>
       </div>
       <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
-        <span class="section-label block mb-1">Avg. Launched</span>
-        <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
-          <%= @result[:avg_launched] %>
+        <span class="section-label block mb-1">Avg. SS1 LLC Return</span>
+        <span class="text-xl text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(sr[:ss1]) %>
         </span>
       </div>
       <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
-        <span class="section-label block mb-1">Avg. Exits / Failures</span>
-        <span class="text-xl font-semibold" style="font-family: var(--font-data);">
-          <span class="text-signal-green"><%= @result[:avg_exited] %></span>
-          <span class="text-steel">/</span>
-          <span class="text-signal-red"><%= @result[:avg_failed] %></span>
+        <span class="section-label block mb-1">Avg. Net Profit / (Loss)</span>
+        <% net = sr[:ss1] - @result[:fund_size] %>
+        <span class="text-xl font-semibold <%= net >= 0 ? 'text-signal-green' : 'text-signal-red' %>" style="font-family: var(--font-data);">
+          <%= net >= 0 ? '+' : '' %><%= format_money(net) %>
         </span>
+      </div>
+    </div>
+
+    <%# Stakeholder return averages %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Avg. Alloy Partners Return</span>
+        <span class="text-lg text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(sr[:alloy]) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Common stock proceeds per simulation</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Avg. Founders Return</span>
+        <span class="text-lg text-ice font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(sr[:founders]) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Option pool proceeds per simulation</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Avg. Consortium &amp; Advisory</span>
+        <span class="text-lg text-signal-blue font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(sr[:consortium]) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Pooled common + advisory per simulation</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Avg. Follow-on Investors</span>
+        <span class="text-lg text-signal-green font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(sr[:follow_on]) %>
+        </span>
+        <p class="text-xs text-steel mt-1">
+          Seed: <%= format_money(sr[:seed]) %> &middot;
+          A: <%= format_money(sr[:series_a]) %> &middot;
+          B: <%= format_money(sr[:series_b]) %>
+        </p>
       </div>
     </div>
 
