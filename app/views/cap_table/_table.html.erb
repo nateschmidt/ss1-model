@@ -43,9 +43,13 @@
             <% entity = row[:entity] %>
             <% stripe = i.odd? ? "bg-slate-deep/20" : "" %>
             <tr class="<%= stripe %> border-b border-slate-mid/20 hover:bg-slate-deep/40 transition-colors duration-100">
-              <%# Entity Name %>
+              <%# Entity Name (click to rename, session only) %>
               <td class="px-4 py-2.5">
-                <span class="text-sm font-medium text-white"><%= entity.name %></span>
+                <span class="text-sm font-medium text-white cursor-pointer hover:text-accent transition-colors"
+                      data-controller="editable-name"
+                      data-editable-name-entity-id-value="<%= entity.id %>"
+                      data-editable-name-default-name-value="<%= entity.name %>"
+                      data-action="click->editable-name#edit"><%= entity.name %></span>
               </td>
 
               <%# Type Badge %>
@@ -98,7 +102,8 @@
                   <span class="data-cell w-5 text-center text-ice"><%= entity.finders_fee_count %></span>
                   <%= button_to "+", increment_finders_fee_path(entity),
                         method: :post,
-                        class: "stepper-btn" %>
+                        class: "stepper-btn",
+                        disabled: @finders_fee_cap_reached %>
                 </div>
               </td>
 

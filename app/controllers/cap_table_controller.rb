@@ -1,8 +1,6 @@
 class CapTableController < ApplicationController
   def show
-    @calculator = CapTableCalculator.new
-    @result = @calculator.compute
-    @variables = Variable.all.index_by(&:key)
+    load_cap_table
   end
 
   def update_variable
@@ -11,10 +9,7 @@ class CapTableController < ApplicationController
 
     sync_consortium_members if variable.key == "consortium_members"
 
-    @calculator = CapTableCalculator.new
-    @result = @calculator.compute
-    @variables = Variable.all.index_by(&:key)
-
+    load_cap_table
     render turbo_stream: turbo_stream.replace("cap-table", partial: "cap_table/table")
   end
 
@@ -22,23 +17,21 @@ class CapTableController < ApplicationController
     entity = Entity.find(params[:id])
     entity.update!(entity_params)
 
-    @calculator = CapTableCalculator.new
-    @result = @calculator.compute
-    @variables = Variable.all.index_by(&:key)
-
+    load_cap_table
     render turbo_stream: turbo_stream.replace("cap-table", partial: "cap_table/table")
   end
 
   def increment_finders_fee
     entity = Entity.find(params[:id])
     total_companies = [Variable.val("total_companies").to_i, 1].max
-    new_count = [entity.finders_fee_count + 1, total_companies].min
-    entity.update!(finders_fee_count: new_count)
+    aggregate_used = Entity.sum(:finders_fee_count)
 
-    @calculator = CapTableCalculator.new
-    @result = @calculator.compute
-    @variables = Variable.all.index_by(&:key)
+    if aggregate_used < total_companies
+      new_count = [entity.finders_fee_count + 1, total_companies].min
+      entity.update!(finders_fee_count: new_count)
+    end
 
+    load_cap_table
     render turbo_stream: turbo_stream.replace("cap-table", partial: "cap_table/table")
   end
 
@@ -47,10 +40,7 @@ class CapTableController < ApplicationController
     new_count = [entity.finders_fee_count - 1, 0].max
     entity.update!(finders_fee_count: new_count)
 
-    @calculator = CapTableCalculator.new
-    @result = @calculator.compute
-    @variables = Variable.all.index_by(&:key)
-
+    load_cap_table
     render turbo_stream: turbo_stream.replace("cap-table", partial: "cap_table/table")
   end
 
@@ -94,6 +84,14 @@ class CapTableController < ApplicationController
       e.update_column(:position, pos)
       pos += 1
     end
+  end
+
+  def load_cap_table
+    @calculator = CapTableCalculator.new
+    @result = @calculator.compute
+    @variables = Variable.all.index_by(&:key)
+    total_companies = [Variable.val("total_companies").to_i, 1].max
+    @finders_fee_cap_reached = Entity.sum(:finders_fee_count) >= total_companies
   end
 
   def entity_params
