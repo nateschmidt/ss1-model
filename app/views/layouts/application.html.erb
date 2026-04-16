@@ -41,7 +41,14 @@
           </div>
         </div>
         <div class="flex items-center gap-4">
-          <span class="section-label text-steel">Cap Table Model</span>
+          <% nav_items = [["Cap Table", root_path], ["Scenarios", scenarios_path]] %>
+          <nav class="flex items-center gap-1">
+            <% nav_items.each do |label, path| %>
+              <% active = request.path == path %>
+              <%= link_to label, path,
+                    class: "px-3 py-1.5 rounded text-xs font-medium tracking-wide transition-colors #{active ? 'bg-accent/15 text-accent' : 'text-steel hover:text-silver'}" %>
+            <% end %>
+          </nav>
           <div class="w-px h-5 bg-slate-mid"></div>
           <span class="data-cell text-ash"><%= Time.current.strftime("%B %Y") %></span>
           <div class="w-px h-5 bg-slate-mid"></div>

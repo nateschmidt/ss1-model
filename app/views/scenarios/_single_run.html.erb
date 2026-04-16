@@ -1,0 +1,293 @@
+<%= turbo_frame_tag "scenario-results" do %>
+<div>
+  <%# ═══ PORTFOLIO OVERVIEW ═══ %>
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Portfolio Snapshot</h2>
+      <span class="text-xs text-steel ml-2">Single simulation</span>
+    </div>
+
+    <%# Compute aggregate returns per stakeholder group %>
+    <%
+      companies = @portfolio[:companies]
+      waterfall_sum = ->(key) { companies.sum { |c| c[:waterfall]&.dig(key) || 0 } }
+
+      ss1_total       = waterfall_sum.call(:ss1)
+      alloy_total     = waterfall_sum.call(:alloy)
+      founders_total  = waterfall_sum.call(:founders)
+      consortium_total = waterfall_sum.call(:consortium) + waterfall_sum.call(:advisory)
+      seed_total      = waterfall_sum.call(:seed)
+      series_a_total  = waterfall_sum.call(:series_a)
+      series_b_total  = waterfall_sum.call(:series_b)
+    %>
+
+    <%# Row 1: Fund overview %>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Fund Size</span>
+        <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(@fund_size) %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Launched / Exited / Failed</span>
+        <span class="text-xl font-semibold" style="font-family: var(--font-data);">
+          <span class="text-white"><%= @portfolio[:companies_launched] %></span>
+          <span class="text-steel">/</span>
+          <span class="text-signal-green"><%= @portfolio[:companies_exited] %></span>
+          <span class="text-steel">/</span>
+          <span class="text-signal-red"><%= @portfolio[:companies_failed] %></span>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Fund TVPI</span>
+        <span class="text-xl text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= format_multiple(@portfolio[:tvpi]) %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">SS1 LLC Total Return</span>
+        <span class="text-xl text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(ss1_total) %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Net Profit / (Loss)</span>
+        <% net = ss1_total - @fund_size %>
+        <span class="text-xl font-semibold <%= net >= 0 ? 'text-signal-green' : 'text-signal-red' %>" style="font-family: var(--font-data);">
+          <%= net >= 0 ? '+' : '' %><%= format_money(net) %>
+        </span>
+      </div>
+    </div>
+
+    <%# Row 2: Stakeholder returns %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Alloy Partners</span>
+        <span class="text-lg text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(alloy_total) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Across all exits as common holder</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Founders (All Companies)</span>
+        <span class="text-lg text-ice font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(founders_total) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Option pool proceeds across portfolio</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Consortium &amp; Advisory</span>
+        <span class="text-lg text-signal-blue font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(consortium_total) %>
+        </span>
+        <p class="text-xs text-steel mt-1">Pooled common + advisory shares</p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Follow-on Investors</span>
+        <span class="text-lg text-signal-green font-semibold" style="font-family: var(--font-data);">
+          <%= format_money(seed_total + series_a_total + series_b_total) %>
+        </span>
+        <p class="text-xs text-steel mt-1">
+          Seed: <%= format_money(seed_total) %> &middot;
+          A: <%= format_money(series_a_total) %> &middot;
+          B: <%= format_money(series_b_total) %>
+        </p>
+      </div>
+    </div>
+
+    <%# Fund Balance Tracker %>
+    <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="section-label text-silver">Fund Drawdown</span>
+        <span class="data-cell text-ash">
+          <%= format_money(@portfolio[:total_deployed]) %> deployed
+          &middot;
+          <%= format_money(@portfolio[:total_returned]) %> returned
+        </span>
+      </div>
+      <div class="w-full bg-slate-deep rounded-full h-3 overflow-hidden">
+        <% deployed_pct = (@portfolio[:total_deployed] / @fund_size * 100).clamp(0, 100) %>
+        <div class="h-3 rounded-full bg-accent/60" style="width: <%= deployed_pct %>%"></div>
+      </div>
+      <div class="flex justify-between mt-1.5">
+        <span class="text-xs text-steel">$0</span>
+        <span class="text-xs text-steel"><%= format_money(@fund_size) %></span>
+      </div>
+    </div>
+  </section>
+
+  <%# ═══ COMPANY BY COMPANY ═══ %>
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Company by Company</h2>
+    </div>
+
+    <div class="space-y-4">
+      <% @portfolio[:companies].each do |company| %>
+        <div class="bg-charcoal border border-slate-mid/60 rounded-lg overflow-hidden">
+          <%# Company Header %>
+          <div class="px-5 py-3 border-b border-slate-mid/30">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <span class="text-white font-medium">Company <%= company[:number] %></span>
+                <span class="text-xs px-2.5 py-1 rounded border <%= outcome_badge_bg(company[:outcome]) %>">
+                  <%= company[:outcome].to_s.capitalize %>
+                </span>
+                <span class="text-xs text-steel"><%= stage_label(company[:stage]) %></span>
+                <span class="text-xs text-ash"><%= company[:months_active] %> months incubation</span>
+              </div>
+              <div class="data-cell text-silver">
+                Balance: <span class="text-white"><%= format_money(company[:fund_remaining]) %></span>
+              </div>
+            </div>
+          </div>
+
+          <%# Metrics Row %>
+          <div class="px-5 py-3 grid grid-cols-4 gap-4 border-b border-slate-mid/20">
+            <div>
+              <span class="section-label block mb-0.5">Capital Deployed</span>
+              <span class="data-cell text-ice"><%= format_money(company[:capital_deployed]) %></span>
+            </div>
+            <div>
+              <span class="section-label block mb-0.5">Exit Value</span>
+              <span class="data-cell <%= company[:exit_value] > 0 ? 'text-signal-green' : 'text-steel' %>">
+                <%= company[:exit_value] > 0 ? format_money(company[:exit_value]) : 'No exit' %>
+              </span>
+            </div>
+            <div>
+              <span class="section-label block mb-0.5">Returned to Fund (SS1)</span>
+              <span class="data-cell <%= company[:fund_return] > 0 ? 'text-accent font-medium' : 'text-steel' %>">
+                <%= company[:fund_return] > 0 ? format_money(company[:fund_return]) : '$0' %>
+              </span>
+            </div>
+            <div>
+              <span class="section-label block mb-0.5">Multiple on Deployed</span>
+              <% multiple = company[:capital_deployed] > 0 ? company[:fund_return] / company[:capital_deployed].to_f : 0 %>
+              <span class="data-cell <%= multiple >= 1 ? 'text-signal-green' : 'text-signal-red' %>">
+                <%= format_multiple(multiple) %>
+              </span>
+            </div>
+          </div>
+
+          <%# Detail section — rounds, ownership, waterfall %>
+          <% if company[:rounds]&.any? || company[:cap_table] %>
+            <div class="px-5 py-3 grid grid-cols-3 gap-6">
+              <%# Funding Rounds %>
+              <div>
+                <span class="section-label block mb-2">Funding Rounds</span>
+                <% if company[:rounds]&.any? %>
+                  <div class="space-y-2">
+                    <% company[:rounds].each do |round| %>
+                      <div class="bg-slate-deep/50 rounded px-3 py-2">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs text-silver font-medium"><%= round[:name] %></span>
+                          <span class="data-cell text-ice text-xs"><%= format_money(round[:amount]) %></span>
+                        </div>
+                        <span class="text-xs text-steel"><%= "%.0f" % round[:dilution_pct] %>% dilution</span>
+                      </div>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-xs text-steel">No rounds raised</span>
+                <% end %>
+              </div>
+
+              <%# Ownership at Exit %>
+              <div>
+                <span class="section-label block mb-2">Ownership at Exit</span>
+                <% if company[:cap_table] %>
+                  <% active = company[:cap_table].reject { |_, v| v[:type] == :pool } %>
+                  <% total_pct = active.values.sum { |v| v[:pct] } %>
+                  <div class="space-y-1">
+                    <% [:series_b, :series_a, :seed, :ss1, :founders, :alloy, :consortium, :advisory].each do |key| %>
+                      <% entry = active[key] %>
+                      <% next unless entry && entry[:pct] > 0.01 %>
+                      <% effective_pct = total_pct > 0 ? (entry[:pct] / total_pct * 100) : 0 %>
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs text-ash">
+                          <%= waterfall_keys_label(key) %>
+                          <% if key == :founders && company[:founder_pool_pct] %>
+                            <span class="text-accent-dim">(<%= "%.0f" % company[:founder_pool_pct] %>% / <%= "%.0f" % @vars_pool %>%)</span>
+                          <% end %>
+                        </span>
+                        <div class="flex items-center gap-2">
+                          <div class="w-16 bg-slate-deep rounded-full h-1.5 overflow-hidden">
+                            <div class="h-1.5 rounded-full <%= key == :ss1 ? 'bg-accent' : 'bg-steel' %>"
+                                 style="width: <%= [effective_pct, 100].min %>%"></div>
+                          </div>
+                          <span class="data-cell text-xs w-12 text-right <%= key == :ss1 ? 'text-accent font-medium' : 'text-ice' %>">
+                            <%= "%.1f" % effective_pct %>%
+                          </span>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-xs text-steel">N/A</span>
+                <% end %>
+              </div>
+
+              <%# Waterfall %>
+              <div>
+                <span class="section-label block mb-2">Exit Waterfall</span>
+                <% if company[:waterfall]&.any? && company[:exit_value] > 0 %>
+                  <div class="space-y-1">
+                    <% [:series_b, :series_a, :seed, :ss1, :founders, :alloy, :consortium, :advisory].each do |key| %>
+                      <% val = company[:waterfall][key] %>
+                      <% next unless val && val > 0 %>
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs text-ash"><%= waterfall_keys_label(key) %></span>
+                        <span class="data-cell text-xs <%= key == :ss1 ? 'text-accent font-medium' : 'text-ice' %>">
+                          <%= format_money(val) %>
+                        </span>
+                      </div>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-xs text-steel">No exit proceeds</span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <%# ═══ PORTFOLIO TOTALS ═══ %>
+  <section class="mb-6">
+    <div class="bg-slate-deep border border-slate-mid/60 rounded-lg p-5">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div>
+          <span class="section-label block mb-1">Total Deployed</span>
+          <span class="text-lg text-white font-semibold" style="font-family: var(--font-data);">
+            <%= format_money(@portfolio[:total_deployed]) %>
+          </span>
+        </div>
+        <div>
+          <span class="section-label block mb-1">Total Returned to Fund</span>
+          <span class="text-lg text-accent font-semibold" style="font-family: var(--font-data);">
+            <%= format_money(@portfolio[:total_returned]) %>
+          </span>
+        </div>
+        <div>
+          <span class="section-label block mb-1">Net Profit / (Loss)</span>
+          <% net = @portfolio[:total_returned] - @fund_size %>
+          <span class="text-lg font-semibold <%= net >= 0 ? 'text-signal-green' : 'text-signal-red' %>" style="font-family: var(--font-data);">
+            <%= net >= 0 ? '+' : '' %><%= format_money(net) %>
+          </span>
+        </div>
+        <div>
+          <span class="section-label block mb-1">TVPI</span>
+          <span class="text-lg text-white font-semibold" style="font-family: var(--font-data);">
+            <%= format_multiple(@portfolio[:tvpi]) %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<% end %>

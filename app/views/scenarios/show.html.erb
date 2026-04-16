@@ -1,0 +1,84 @@
+<div class="w-full max-w-7xl mx-auto">
+  <%# ═══ PAGE HEADER ═══ %>
+  <div class="mb-8">
+    <h1 class="text-2xl font-semibold text-white mb-1" style="font-family: var(--font-display);">
+      Scenario Modeling
+    </h1>
+    <p class="text-sm text-ash">
+      Simulate portfolio outcomes &mdash; deploy until less than $1M remains
+    </p>
+  </div>
+
+  <%# ═══ CONTROLS ═══ %>
+  <div class="bg-charcoal border border-slate-mid/60 rounded-lg mb-8">
+    <%# Top row: Risk Tolerance %>
+    <div class="px-6 py-4 border-b border-slate-mid/30">
+      <label class="section-label block mb-3">Risk Tolerance</label>
+      <div class="flex gap-2" id="risk-selector">
+        <% %w[conservative moderate aggressive].each do |level| %>
+          <button type="button" data-risk="<%= level %>"
+            class="risk-btn flex-1 px-4 py-2.5 rounded border text-sm text-center transition-colors
+                   <%= @risk_level == level ? 'bg-accent/20 text-accent border-accent/40' : 'border-slate-mid text-ash hover:border-steel hover:text-silver' %>"
+            onclick="document.querySelectorAll('.risk-btn').forEach(b => { b.className = b.className.replace(/bg-accent\/20 text-accent border-accent\/40/, 'border-slate-mid text-ash hover:border-steel hover:text-silver'); }); this.className = this.className.replace(/border-slate-mid text-ash hover:border-steel hover:text-silver/, 'bg-accent/20 text-accent border-accent/40'); document.querySelectorAll('.risk-input').forEach(i => i.value = this.dataset.risk);">
+            <%= level.capitalize %>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Bottom row: Actions %>
+    <div class="px-6 py-4 flex items-center gap-6">
+      <%# Single Run — primary action %>
+      <%= form_with(url: single_run_scenarios_path, method: :post, class: "flex-1") do |f| %>
+        <%= f.hidden_field :risk_level, value: @risk_level, class: "risk-input" %>
+        <div class="flex items-center justify-between bg-slate-deep/40 rounded-lg px-5 py-3">
+          <div>
+            <span class="text-sm text-white font-medium">Single Simulation</span>
+            <p class="text-xs text-steel mt-0.5">Generate one portfolio and view results company by company</p>
+          </div>
+          <%= f.submit "Run Once",
+                class: "px-6 py-2.5 bg-accent text-midnight font-semibold text-sm rounded
+                         hover:bg-accent-glow transition-colors cursor-pointer" %>
+        </div>
+      <% end %>
+
+      <div class="w-px h-14 bg-slate-mid/40 flex-shrink-0"></div>
+
+      <%# Monte Carlo — secondary action %>
+      <%= form_with(url: simulate_scenarios_path, method: :post, class: "flex-1") do |f| %>
+        <%= f.hidden_field :risk_level, value: @risk_level, class: "risk-input" %>
+        <div class="flex items-center justify-between bg-slate-deep/40 rounded-lg px-5 py-3">
+          <div>
+            <span class="text-sm text-white font-medium">Monte Carlo Analysis</span>
+            <p class="text-xs text-steel mt-0.5">Run multiple simulations for percentile bands</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex gap-1">
+              <% [100, 500, 1000].each do |n| %>
+                <label class="cursor-pointer">
+                  <%= f.radio_button :num_simulations, n, class: "sr-only peer", checked: (@num_simulations || 500) == n %>
+                  <span class="peer-checked:bg-accent/20 peer-checked:text-accent peer-checked:border-accent/40
+                               block px-3 py-1.5 rounded border border-slate-mid text-xs text-ash
+                               hover:border-steel hover:text-silver transition-colors">
+                    <%= number_with_delimiter(n) %>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+            <%= f.submit "Run",
+                  class: "px-5 py-2.5 bg-slate-deep border border-slate-mid text-silver font-semibold text-sm rounded
+                           hover:border-accent hover:text-accent transition-colors cursor-pointer" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ═══ RESULTS ═══ %>
+  <%= turbo_frame_tag "scenario-results" do %>
+    <div class="text-center py-16 text-steel">
+      <p class="text-lg mb-2">Select a risk level and click Run Once</p>
+      <p class="text-sm">Or run a Monte Carlo simulation for percentile analysis</p>
+    </div>
+  <% end %>
+</div>
