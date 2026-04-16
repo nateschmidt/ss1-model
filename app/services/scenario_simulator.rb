@@ -4,36 +4,36 @@ class ScenarioSimulator
 
   RISK_PROFILES = {
     conservative: {
+      incubation_survival: 0.25,
+      post_seed:  { die: 0.40, exit: 0.20, advance: 0.40 },
+      post_a:     { die: 0.30, exit: 0.30, advance: 0.40 },
+      post_b:     { die: 0.25, exit: 0.75 },
+      exit_values: {
+        small:  { min: 5_000_000,   max: 30_000_000 },
+        medium: { min: 25_000_000,  max: 100_000_000 },
+        large:  { min: 60_000_000,  max: 300_000_000 },
+      },
+    },
+    moderate: {
       incubation_survival: 0.40,
-      post_seed:  { die: 0.30, exit: 0.20, advance: 0.50 },
+      post_seed:  { die: 0.25, exit: 0.20, advance: 0.55 },
       post_a:     { die: 0.20, exit: 0.30, advance: 0.50 },
       post_b:     { die: 0.15, exit: 0.85 },
       exit_values: {
-        small:  { min: 8_000_000,   max: 50_000_000 },
+        small:  { min: 10_000_000,  max: 50_000_000 },
         medium: { min: 40_000_000,  max: 175_000_000 },
         large:  { min: 100_000_000, max: 500_000_000 },
       },
     },
-    moderate: {
+    aggressive: {
       incubation_survival: 0.55,
-      post_seed:  { die: 0.20, exit: 0.15, advance: 0.65 },
-      post_a:     { die: 0.15, exit: 0.25, advance: 0.60 },
-      post_b:     { die: 0.10, exit: 0.90 },
+      post_seed:  { die: 0.15, exit: 0.15, advance: 0.70 },
+      post_a:     { die: 0.12, exit: 0.23, advance: 0.65 },
+      post_b:     { die: 0.08, exit: 0.92 },
       exit_values: {
         small:  { min: 15_000_000,  max: 75_000_000 },
-        medium: { min: 50_000_000,  max: 250_000_000 },
+        medium: { min: 60_000_000,  max: 300_000_000 },
         large:  { min: 150_000_000, max: 750_000_000 },
-      },
-    },
-    aggressive: {
-      incubation_survival: 0.70,
-      post_seed:  { die: 0.10, exit: 0.10, advance: 0.80 },
-      post_a:     { die: 0.10, exit: 0.20, advance: 0.70 },
-      post_b:     { die: 0.05, exit: 0.95 },
-      exit_values: {
-        small:  { min: 20_000_000,  max: 100_000_000 },
-        medium: { min: 75_000_000,  max: 400_000_000 },
-        large:  { min: 200_000_000, max: 1_000_000_000 },
       },
     },
   }.freeze

@@ -1,12 +1,22 @@
 <div class="w-full max-w-7xl mx-auto">
   <%# ═══ PAGE HEADER ═══ %>
-  <div class="mb-8">
-    <h1 class="text-2xl font-semibold text-white mb-1" style="font-family: var(--font-display);">
-      Scenario Modeling
-    </h1>
-    <p class="text-sm text-ash">
-      Simulate portfolio outcomes &mdash; deploy until less than $1M remains
-    </p>
+  <div class="mb-8 flex items-end justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-white mb-1" style="font-family: var(--font-display);">
+        Scenario Modeling
+      </h1>
+      <p class="text-sm text-ash">
+        Simulate portfolio outcomes &mdash; deploy until less than $1M remains
+      </p>
+    </div>
+    <% if session[:scenario_companies].present? %>
+      <%= link_to deployment_path, class: "inline-flex items-center gap-2 px-5 py-2 bg-accent/15 border border-accent/40 text-accent font-medium text-sm rounded-lg hover:bg-accent/25 transition-colors" do %>
+        <span>View Deployment Schedule</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      <% end %>
+    <% end %>
   </div>
 
   <%# ═══ CONTROLS ═══ %>

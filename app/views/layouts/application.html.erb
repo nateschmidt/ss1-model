@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="flex items-center gap-4">
-          <% nav_items = [["Cap Table", root_path], ["Scenarios", scenarios_path]] %>
+          <% nav_items = [["Cap Table", root_path], ["Scenarios", scenarios_path], ["Deployment", deployment_path]] %>
           <nav class="flex items-center gap-1">
             <% nav_items.each do |label, path| %>
               <% active = request.path == path %>

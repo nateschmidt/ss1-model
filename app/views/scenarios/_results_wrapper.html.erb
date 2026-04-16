@@ -1,0 +1,11 @@
+<%= turbo_frame_tag "scenario-results" do %>
+  <% if @portfolio %>
+    <div>
+      <%= render partial: "scenarios/single_run_inner" %>
+    </div>
+  <% elsif @result %>
+    <div>
+      <%= render partial: "scenarios/results_inner" %>
+    </div>
+  <% end %>
+<% end %>

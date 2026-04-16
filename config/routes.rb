@@ -13,4 +13,8 @@ Rails.application.routes.draw do
   get "scenarios", to: "scenarios#show", as: :scenarios
   post "scenarios/single_run", to: "scenarios#single_run", as: :single_run_scenarios
   post "scenarios/simulate", to: "scenarios#simulate", as: :simulate_scenarios
+
+  # Deployment Schedule
+  get "deployment", to: "deployment#show", as: :deployment
+  post "deployment/generate", to: "deployment#generate", as: :generate_deployment
 end

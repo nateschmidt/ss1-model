@@ -1,0 +1,282 @@
+<%= turbo_frame_tag "deployment-results" do %>
+<div>
+  <%# ═══ SUMMARY METRICS ═══ %>
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Deployment Overview</h2>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Companies</span>
+        <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
+          <%= @schedule[:companies_scheduled] %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Peak Concurrent</span>
+        <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
+          <%= @schedule[:peak_concurrent] %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Peak Teams</span>
+        <span class="text-xl text-white font-semibold" style="font-family: var(--font-data);">
+          <%= @schedule[:peak_teams] %>
+        </span>
+        <p class="text-xs text-steel mt-1"><%= @schedule[:peak_teams] > 1 ? "#{@schedule[:peak_teams] - 1} incremental" : "Internal only" %></p>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Alloy Revenue</span>
+        <span class="text-xl text-accent font-semibold" style="font-family: var(--font-data);">
+          <%= number_to_currency(@schedule[:total_revenue], precision: 0) %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Operating Cost</span>
+        <span class="text-xl text-signal-red font-semibold" style="font-family: var(--font-data);">
+          <%= number_to_currency(@schedule[:total_cost], precision: 0) %>
+        </span>
+      </div>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+        <span class="section-label block mb-1">Net to Alloy</span>
+        <span class="text-xl font-semibold <%= @schedule[:total_net] >= 0 ? 'text-signal-green' : 'text-signal-red' %>" style="font-family: var(--font-data);">
+          <%= number_to_currency(@schedule[:total_net], precision: 0) %>
+        </span>
+        <% if @schedule[:breakeven_month] %>
+          <p class="text-xs text-steel mt-1">Break-even: Month <%= @schedule[:breakeven_month] %></p>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <%# ═══ GANTT CHART ═══ %>
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Launch Timeline</h2>
+      <span class="text-xs text-steel ml-2"><%= @schedule[:total_months] %> months total</span>
+    </div>
+
+    <div class="bg-charcoal border border-slate-mid/60 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <% total_m = @schedule[:total_months] %>
+        <% col_w = [32, (900.0 / [total_m, 1].max).floor].max %>
+        <table class="w-full" style="min-width: <%= total_m * col_w %>px;">
+          <%# Month header %>
+          <thead>
+            <tr class="border-b border-slate-mid/60">
+              <th class="text-left px-3 py-2 section-label sticky left-0 bg-charcoal z-10 min-w-[80px]">Company</th>
+              <% (1..total_m).each do |m| %>
+                <th class="text-center py-2 section-label text-steel" style="min-width: <%= col_w %>px; font-size: 0.6rem;">
+                  M<%= m %>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @schedule[:gantt].each_with_index do |g, i| %>
+              <% stripe = i.odd? ? "bg-slate-deep/20" : "" %>
+              <tr class="<%= stripe %> border-b border-slate-mid/10">
+                <td class="px-3 py-1.5 sticky left-0 bg-charcoal z-10 min-w-[80px]">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-white font-medium">Co <%= g[:number] %></span>
+                    <span class="w-2 h-2 rounded-full <%= gantt_color(g[:outcome]) %>"></span>
+                  </div>
+                </td>
+                <% (1..total_m).each do |m| %>
+                  <td class="p-0.5">
+                    <% if m >= g[:start_month] && m < g[:end_month] %>
+                      <% is_first = m == g[:start_month] %>
+                      <% is_last = m == g[:end_month] - 1 %>
+                      <div class="h-5 <%= gantt_color(g[:outcome]) %>/70
+                                  <%= is_first ? 'rounded-l' : '' %>
+                                  <%= is_last ? 'rounded-r' : '' %>">
+                      </div>
+                    <% end %>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+
+            <%# Teams row %>
+            <tr class="border-t border-slate-mid/40">
+              <td class="px-3 py-1.5 sticky left-0 bg-charcoal z-10">
+                <span class="text-xs text-accent font-medium">Teams</span>
+              </td>
+              <% (1..total_m).each do |m| %>
+                <% t = @schedule[:timeline].find { |t| t[:month] == m } %>
+                <td class="text-center p-0.5">
+                  <% if t && t[:teams] > 0 %>
+                    <span class="data-cell text-accent" style="font-size: 0.6rem;"><%= t[:teams] %></span>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+
+            <%# Concurrent row %>
+            <tr>
+              <td class="px-3 py-1.5 sticky left-0 bg-charcoal z-10">
+                <span class="text-xs text-silver font-medium">Active</span>
+              </td>
+              <% (1..total_m).each do |m| %>
+                <% t = @schedule[:timeline].find { |t| t[:month] == m } %>
+                <td class="text-center p-0.5">
+                  <% if t && t[:concurrent] > 0 %>
+                    <span class="data-cell text-silver" style="font-size: 0.6rem;"><%= t[:concurrent] %></span>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <%# Legend %>
+      <div class="px-4 py-2 border-t border-slate-mid/30 flex items-center gap-5">
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-signal-green/70"></span>
+          <span class="text-xs text-ash">Exited</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-signal-red/70"></span>
+          <span class="text-xs text-ash">Failed</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%# ═══ MONTHLY P&L ═══ %>
+  <section class="mb-8">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Alloy Monthly P&amp;L</h2>
+    </div>
+
+    <div class="bg-charcoal border border-slate-mid/60 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-mid/60">
+              <th class="text-left px-4 py-2 section-label">Month</th>
+              <th class="text-center px-3 py-2 section-label">Active</th>
+              <th class="text-center px-3 py-2 section-label">Teams</th>
+              <th class="text-right px-3 py-2 section-label">Revenue</th>
+              <th class="text-right px-3 py-2 section-label">Teams</th>
+              <th class="text-right px-3 py-2 section-label">Liaison</th>
+              <th class="text-right px-3 py-2 section-label">Launch</th>
+              <th class="text-right px-3 py-2 section-label">Per-Co Misc</th>
+              <th class="text-right px-3 py-2 section-label">Shared Svc</th>
+              <th class="text-right px-3 py-2 section-label">SaaS + OH</th>
+              <th class="text-right px-3 py-2 section-label">Total Cost</th>
+              <th class="text-right px-3 py-2 section-label">Net</th>
+              <th class="text-right px-4 py-2 section-label bg-slate-deep/30">Cumulative</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @schedule[:timeline].each_with_index do |t, i| %>
+              <% next if t[:concurrent] == 0 && t[:launched].empty? && t[:ended].empty? && t[:month] > 2 %>
+              <% stripe = i.odd? ? "bg-slate-deep/20" : "" %>
+              <% has_event = t[:launched].any? || t[:ended].any? %>
+              <tr class="<%= stripe %> border-b border-slate-mid/10 hover:bg-slate-deep/40 transition-colors">
+                <td class="px-4 py-2 text-sm text-white">
+                  M<%= t[:month] %>
+                  <% if t[:launched].any? %>
+                    <span class="text-xs text-signal-green ml-1">+Co<%= t[:launched].join(",") %></span>
+                  <% end %>
+                  <% if t[:ended].any? %>
+                    <span class="text-xs text-signal-red ml-1">-Co<%= t[:ended].join(",") %></span>
+                  <% end %>
+                </td>
+                <td class="px-3 py-2 text-center data-cell text-ice"><%= t[:concurrent] %></td>
+                <td class="px-3 py-2 text-center data-cell text-ice"><%= t[:teams] %></td>
+                <td class="px-3 py-2 text-right data-cell text-signal-green">
+                  <%= t[:revenue] > 0 ? number_to_currency(t[:revenue], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <%= t[:team_cost] > 0 ? number_to_currency(t[:team_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <%= t[:liaison_cost] > 0 ? number_to_currency(t[:liaison_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <%= t[:launch_cost] > 0 ? number_to_currency(t[:launch_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <%= t[:misc_cost] > 0 ? number_to_currency(t[:misc_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <%= t[:shared_cost] > 0 ? number_to_currency(t[:shared_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-ice">
+                  <% saas_oh = t[:saas_cost] + t[:overhead] %>
+                  <%= saas_oh > 0 ? number_to_currency(saas_oh, precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell text-signal-red">
+                  <%= t[:total_cost] > 0 ? number_to_currency(t[:total_cost], precision: 0) : "—" %>
+                </td>
+                <td class="px-3 py-2 text-right data-cell font-medium <%= t[:net] >= 0 ? 'text-signal-green' : 'text-signal-red' %>">
+                  <%= number_to_currency(t[:net], precision: 0) %>
+                </td>
+                <td class="px-4 py-2 text-right data-cell font-semibold bg-slate-deep/20 <%= t[:cumulative_net] >= 0 ? 'text-accent' : 'text-signal-red' %>">
+                  <%= number_to_currency(t[:cumulative_net], precision: 0) %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <%# ═══ COST ASSUMPTIONS ═══ %>
+  <section class="mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-1 h-5 bg-accent rounded-full"></div>
+      <h2 class="section-label text-silver tracking-widest">Cost Assumptions</h2>
+    </div>
+    <div class="bg-charcoal border border-slate-mid/60 rounded-lg p-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div>
+          <span class="text-steel">Revenue per company</span>
+          <span class="text-ice ml-2">$75,000/mo</span>
+        </div>
+        <div>
+          <span class="text-steel">Founder team (2 people)</span>
+          <span class="text-ice ml-2">$600,000/yr</span>
+          <span class="text-steel ml-1">(1st internal)</span>
+        </div>
+        <div>
+          <span class="text-steel">Consortium liaison</span>
+          <span class="text-ice ml-2">$100,000/yr</span>
+          <span class="text-steel ml-1">(1st internal)</span>
+        </div>
+        <div>
+          <span class="text-steel">Launch fixed cost</span>
+          <span class="text-ice ml-2">$10,000/company</span>
+        </div>
+        <div>
+          <span class="text-steel">SaaS & tools</span>
+          <span class="text-ice ml-2">$750/mo per company</span>
+        </div>
+        <div>
+          <span class="text-steel">Per-company misc</span>
+          <span class="text-accent ml-2"><%= number_to_currency(@misc_per_company, precision: 0) %>/mo</span>
+          <span class="text-steel ml-1">(configurable)</span>
+        </div>
+        <div>
+          <span class="text-steel">Shared services</span>
+          <span class="text-accent ml-2"><%= number_to_currency(@shared_services, precision: 0) %>/mo</span>
+          <span class="text-steel ml-1">(configurable)</span>
+        </div>
+        <div>
+          <span class="text-steel">Alloy overhead</span>
+          <span class="text-ice ml-2">$15,000/mo</span>
+          <span class="text-steel ml-1">(design, sales, ops)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<% end %>

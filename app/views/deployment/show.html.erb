@@ -1,0 +1,84 @@
+<div class="w-full max-w-7xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-2xl font-semibold text-white mb-1" style="font-family: var(--font-display);">
+      Deployment Schedule
+    </h1>
+    <p class="text-sm text-ash">
+      Resource planning, launch cadence, and Alloy's operating P&amp;L
+    </p>
+  </div>
+
+  <% unless @has_scenario %>
+    <div class="bg-charcoal border border-accent/30 rounded-lg p-6 mb-8 text-center">
+      <p class="text-silver mb-3">No scenario loaded. Run a scenario first to generate a deployment schedule.</p>
+      <%= link_to "Go to Scenarios", scenarios_path,
+            class: "inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-midnight font-semibold text-sm rounded hover:bg-accent-glow transition-colors" %>
+    </div>
+  <% else %>
+    <%# ═══ SCENARIO CONTEXT ═══ %>
+    <div class="bg-slate-deep/50 border border-slate-mid/40 rounded-lg px-5 py-3 mb-6 flex items-center justify-between">
+      <div>
+        <span class="section-label text-silver">Loaded Scenario</span>
+        <span class="text-sm text-white ml-3"><%= @scenario_label %></span>
+      </div>
+      <%= link_to "Change Scenario", scenarios_path,
+            class: "text-xs text-accent hover:text-accent-glow transition-colors" %>
+    </div>
+
+    <%# ═══ CONTROLS ═══ %>
+    <%= form_with(url: generate_deployment_path, method: :post) do |f| %>
+      <div class="bg-charcoal border border-slate-mid/60 rounded-lg mb-8">
+        <div class="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-6 items-end">
+          <div>
+            <label class="section-label block mb-2">Ramp Period (months)</label>
+            <%= f.number_field :ramp_months, value: @ramp_months, min: 0, max: 6, step: 1,
+                  class: "var-input" %>
+            <p class="text-xs text-steel mt-1">Time before first launch</p>
+          </div>
+
+          <div>
+            <label class="section-label block mb-2">Launch Cadence (months)</label>
+            <%= f.number_field :launch_cadence, value: @launch_cadence, min: 1, max: 6, step: 1,
+                  class: "var-input" %>
+            <p class="text-xs text-steel mt-1">Months between planned launches</p>
+          </div>
+
+          <div>
+            <label class="section-label block mb-2">Per-Company Misc ($/mo)</label>
+            <div class="flex items-center gap-1">
+              <span class="text-steel text-sm">$</span>
+              <%= f.number_field :misc_per_company, value: @misc_per_company, min: 0, step: 500,
+                    class: "var-input" %>
+            </div>
+            <p class="text-xs text-steel mt-1">Cloud, marketing, incidentals</p>
+          </div>
+
+          <div>
+            <label class="section-label block mb-2">Shared Services ($/mo)</label>
+            <div class="flex items-center gap-1">
+              <span class="text-steel text-sm">$</span>
+              <%= f.number_field :shared_services, value: @shared_services, min: 0, step: 1000,
+                    class: "var-input" %>
+            </div>
+            <p class="text-xs text-steel mt-1">Dev shop retainer, consultants</p>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-mid/30">
+          <%= f.submit "Generate Schedule",
+                class: "px-6 py-2.5 bg-accent text-midnight font-semibold text-sm rounded
+                         hover:bg-accent-glow transition-colors cursor-pointer" %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# ═══ RESULTS ═══ %>
+  <%= turbo_frame_tag "deployment-results" do %>
+    <% if @has_scenario %>
+      <div class="text-center py-16 text-steel">
+        <p class="text-lg mb-2">Adjust parameters and generate a schedule</p>
+      </div>
+    <% end %>
+  <% end %>
+</div>
